@@ -1,0 +1,1469 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <string>
+#include <fstream>
+#include "GameMenu.h"
+#include <random>
+
+using namespace sf;
+using namespace std;
+
+vector<Vector2f> interpolateSpline(const vector<Vector2f>& points, int numSegments);
+
+class stancion {
+public:
+    float KamenYg = 0.0536;
+    float mazyt = 0.0549;
+    float prirodGAz = 0.19;
+    int sredznach;
+};
+
+void saveToTable(const vector<float>& rasxodValues, const vector<float>& values) {
+    ofstream outputFile("data.txt");
+    if (outputFile.is_open()) {
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<> distrib(0.0, 10000.0);
+        for (int i = 1; i <= 24; ++i) {
+            float totalVibros = 0;
+            for (size_t j = 0; j < rasxodValues.size(); ++j) {
+                totalVibros += values[j] * distrib(gen);
+            }
+            outputFile << i << " " << totalVibros << endl;
+        }
+        outputFile.close();
+    }
+    else {
+        cout << "Не удалось открыть файл для записи!" << endl;
+    }
+}
+
+//нужна для настройки текста в меню
+void InitText(Text& mtext, float xpos, float ypos, String str, int size_font, Color menu_text_color, int bord, Color border_color)
+{
+    mtext.setCharacterSize(size_font); //размер шрифта
+    mtext.setPosition(xpos, ypos); //позиция текста 
+    mtext.setString(str); //установка текста
+    mtext.setFillColor(menu_text_color); //заливка текста
+    mtext.setOutlineThickness(bord); //толщина обводки
+    mtext.setOutlineColor(border_color); //цвет обводки
+}
+
+void InitText(Text& mtext, float xpos, float ypos, String str, int size_font = 60,
+    Color menu_text_color = Color::White, int bord = 0, Color border_color = Color::Black);
+
+//нужная для установки объектов, то есть картинок, рна жкране
+struct Leaf {
+    RectangleShape shape; //позиция
+    Vector2f Vlist; //скорость падания листьев
+    Vector2f initialPosition; //позиция листа
+    bool ypal; //упал или нет
+};
+
+bool triggerAnimation = false; //анимация выключена изначально
+
+//настройка страници с рабочей атамной станцией. на этом листе у нас будет 3 вида анимации
+//а так же вывод таблици и анимаци  
+void atamst() {
+    //утсанавливает позиции по весь экран
+    RenderWindow About(VideoMode::getDesktopMode(), 
+        L"АТОМНАЯ СТАНЦИЯ", Style::Fullscreen);
+    
+    //очень очень очень много картинок
+    //фон
+    Texture TexturInfoFon1;
+    TexturInfoFon1.loadFromFile("Image/fon1.png");
+    RectangleShape GameBackgroundFon1(Vector2f(2100, 1200));
+    GameBackgroundFon1.setTexture(&TexturInfoFon1);
+    GameBackgroundFon1.setPosition(Vector2f(-70, -70));
+
+    Texture TexturInfoFon4;
+    TexturInfoFon4.loadFromFile("Image/fon4.png");
+    RectangleShape GameBackgroundFon4(Vector2f(2100, 1200));
+    GameBackgroundFon4.setTexture(&TexturInfoFon4);
+    GameBackgroundFon4.setPosition(Vector2f(-70, -70));
+
+    Texture TexturInfoboom;
+    TexturInfoboom.loadFromFile("Image/boom.png");
+    RectangleShape GameBackgroundboom(Vector2f(2100, 1200));
+    GameBackgroundboom.setTexture(&TexturInfoboom);
+    GameBackgroundboom.setPosition(Vector2f(-70, -70));
+
+    Texture TexturInfoFon5;
+    TexturInfoFon5.loadFromFile("Image/fon5.png");
+    RectangleShape GameBackgroundFon5(Vector2f(2100, 1200));
+    GameBackgroundFon5.setTexture(&TexturInfoFon5);
+    GameBackgroundFon5.setPosition(Vector2f(-70, -70));
+
+    Texture TexturInfogg;
+    TexturInfogg.loadFromFile("Image/gg.png");
+    RectangleShape GameBackgroundgg(Vector2f(666, 100));
+    GameBackgroundgg.setTexture(&TexturInfogg);
+    GameBackgroundgg.setPosition(Vector2f(650, 400));
+
+    Texture TexturInfosol;
+    TexturInfosol.loadFromFile("Image/sol.png");
+    RectangleShape GameBackgroundsol(Vector2f(250, 250));
+    GameBackgroundsol.setTexture(&TexturInfosol);
+    GameBackgroundsol.setPosition(Vector2f(0, 0));
+
+    //стнация
+    Texture TexturInfoStan;
+    TexturInfoStan.loadFromFile("Image/stan.png");
+    RectangleShape GameBackgroundStan(Vector2f(850, 600));
+    GameBackgroundStan.setTexture(&TexturInfoStan);
+    GameBackgroundStan.setPosition(Vector2f(1050, 150));
+
+    //derevo
+    Texture TexturInfoDer;
+    TexturInfoDer.loadFromFile("Image/der.png");
+    RectangleShape GameBackgroundDer(Vector2f(377, 300));
+    GameBackgroundDer.setTexture(&TexturInfoDer);
+    GameBackgroundDer.setPosition(Vector2f(650, 280));
+
+    //list1
+    Texture TexturInfoList1;
+    TexturInfoList1.loadFromFile("Image/list1.png");
+    RectangleShape GameBackgroundList1(Vector2f(50, 50));
+    GameBackgroundList1.setTexture(&TexturInfoList1);
+    GameBackgroundList1.setPosition(Vector2f(700, 405));
+
+    //list2
+    Texture TexturInfoList2;
+    TexturInfoList2.loadFromFile("Image/list1.png");
+    RectangleShape GameBackgroundList2(Vector2f(50, 50));
+    GameBackgroundList2.setTexture(&TexturInfoList2);
+    GameBackgroundList2.setPosition(Vector2f(666, 354));
+
+    //list3
+    Texture TexturInfoList3;
+    TexturInfoList3.loadFromFile("Image/list1.png");
+    RectangleShape GameBackgroundList3(Vector2f(50, 50));
+    GameBackgroundList3.setTexture(&TexturInfoList3);
+    GameBackgroundList3.setPosition(Vector2f(738, 356));
+
+    //list4
+    Texture TexturInfoList4;
+    TexturInfoList4.loadFromFile("Image/list2.png");
+    RectangleShape GameBackgroundList4(Vector2f(50, 50));
+    GameBackgroundList4.setTexture(&TexturInfoList4);
+    GameBackgroundList4.setPosition(Vector2f(760, 306));
+
+    //list5
+    Texture TexturInfoList5;
+    TexturInfoList5.loadFromFile("Image/list2.png");
+    RectangleShape GameBackgroundList5(Vector2f(50, 50));
+    GameBackgroundList5.setTexture(&TexturInfoList5);
+    GameBackgroundList5.setPosition(Vector2f(772, 388));
+
+    //list6
+    Texture TexturInfoList6;
+    TexturInfoList6.loadFromFile("Image/list2.png");
+    RectangleShape GameBackgroundList6(Vector2f(50, 50));
+    GameBackgroundList6.setTexture(&TexturInfoList6);
+    GameBackgroundList6.setPosition(Vector2f(810, 333));
+
+    //list7
+    Texture TexturInfoList7;
+    TexturInfoList7.loadFromFile("Image/list3.png");
+    RectangleShape GameBackgroundList7(Vector2f(50, 50));
+    GameBackgroundList7.setTexture(&TexturInfoList7);
+    GameBackgroundList7.setPosition(Vector2f(820, 265));
+
+    //list8
+    Texture TexturInfoList8;
+    TexturInfoList8.loadFromFile("Image/list3.png");
+    RectangleShape GameBackgroundList8(Vector2f(50, 50));
+    GameBackgroundList8.setTexture(&TexturInfoList8);
+    GameBackgroundList8.setPosition(Vector2f(885, 300));
+
+    //list9
+    Texture TexturInfoList9;
+    TexturInfoList9.loadFromFile("Image/list3.png");
+    RectangleShape GameBackgroundList9(Vector2f(50, 50));
+    GameBackgroundList9.setTexture(&TexturInfoList9);
+    GameBackgroundList9.setPosition(Vector2f(890, 410));
+
+    //list10
+    Texture TexturInfoList10;
+    TexturInfoList10.loadFromFile("Image/list3.png");
+    RectangleShape GameBackgroundList10(Vector2f(50, 50));
+    GameBackgroundList10.setTexture(&TexturInfoList10);
+    GameBackgroundList10.setPosition(Vector2f(900, 350));
+
+    //list11
+    Texture TexturInfoList11;
+    TexturInfoList11.loadFromFile("Image/list2.png");
+    RectangleShape GameBackgroundList11(Vector2f(50, 50));
+    GameBackgroundList11.setTexture(&TexturInfoList11);
+    GameBackgroundList11.setPosition(Vector2f(825, 395));
+
+    //list12
+    Texture TexturInfoList12;
+    TexturInfoList12.loadFromFile("Image/list1.png");
+    RectangleShape GameBackgroundList12(Vector2f(50, 50));
+    GameBackgroundList12.setTexture(&TexturInfoList12);
+    GameBackgroundList12.setPosition(Vector2f(700, 290));
+
+    //забор
+    Texture TexturInfoZab;
+    TexturInfoZab.loadFromFile("Image/zab.png");
+    RectangleShape GameBackgroundZab(Vector2f(1260, 200));
+    GameBackgroundZab.setTexture(&TexturInfoZab);
+    GameBackgroundZab.setPosition(Vector2f(650, 630));
+
+    //znak1
+    Texture TexturInfoZn1;
+    TexturInfoZn1.loadFromFile("Image/zn1.png");
+    RectangleShape GameBackgroundZn1(Vector2f(150, 100));
+    GameBackgroundZn1.setTexture(&TexturInfoZn1);
+    GameBackgroundZn1.setPosition(Vector2f(666, 675));
+
+    //znak2
+    Texture TexturInfoZn2;
+    TexturInfoZn2.loadFromFile("Image/zn2.png");
+    RectangleShape GameBackgroundZn2(Vector2f(150, 100));
+    GameBackgroundZn2.setTexture(&TexturInfoZn2);
+    GameBackgroundZn2.setPosition(Vector2f(1750, 675));
+
+    //znak3
+    Texture TexturInfoZn3;
+    TexturInfoZn3.loadFromFile("Image/zn3.png");
+    RectangleShape GameBackgroundZn3(Vector2f(150, 100));
+    GameBackgroundZn3.setTexture(&TexturInfoZn3);
+    GameBackgroundZn3.setPosition(Vector2f(1200, 675));
+
+    //znak4
+    Texture TexturInfoZn4;
+    TexturInfoZn4.loadFromFile("Image/zn3.png");
+    RectangleShape GameBackgroundZn4(Vector2f(55, 55));
+    GameBackgroundZn4.setTexture(&TexturInfoZn4);
+    GameBackgroundZn4.setPosition(Vector2f(802, 485));
+
+    //dim1
+    Texture TexturInfod1;
+    TexturInfod1.loadFromFile("Image/d1.png");
+    RectangleShape GameBackgroundd1(Vector2f(265, 250));
+    GameBackgroundd1.setTexture(&TexturInfod1);
+    GameBackgroundd1.setPosition(Vector2f(1210, 175));
+
+    //dim2
+    Texture TexturInfod2;
+    TexturInfod2.loadFromFile("Image/d2.png");
+    RectangleShape GameBackgroundd2(Vector2f(270, 255));
+    GameBackgroundd2.setTexture(&TexturInfod2);
+    GameBackgroundd2.setPosition(Vector2f(1215, 100));
+
+    //dim3
+    Texture TexturInfod3;
+    TexturInfod3.loadFromFile("Image/d1.png");
+    RectangleShape GameBackgroundd3(Vector2f(225, 175));
+    GameBackgroundd3.setTexture(&TexturInfod3);
+    GameBackgroundd3.setPosition(Vector2f(1495, 275));
+
+    //dim4
+    Texture TexturInfod4;
+    TexturInfod4.loadFromFile("Image/d2.png");
+    RectangleShape GameBackgroundd4(Vector2f(230, 175));
+    GameBackgroundd4.setTexture(&TexturInfod4);
+    GameBackgroundd4.setPosition(Vector2f(1500, 210));
+
+    //start
+    Texture TexturInfoStart;
+    TexturInfoStart.loadFromFile("Image/start.png");
+    RectangleShape GameBackgroundStart(Vector2f(150, 75));
+    GameBackgroundStart.setTexture(&TexturInfoStart);
+    GameBackgroundStart.setPosition(Vector2f(50, 1000));
+
+    //start
+    Texture TexturInfoStop;
+    TexturInfoStop.loadFromFile("Image/stop.png");
+    RectangleShape GameBackgroundStop(Vector2f(150, 70));
+    GameBackgroundStop.setTexture(&TexturInfoStop);
+    GameBackgroundStop.setPosition(Vector2f(200, 1000));
+
+    //tych
+    Texture TexturInfotych;
+    TexturInfotych.loadFromFile("Image/tych.png");
+    RectangleShape GameBackgroundtych(Vector2f(250, 150));
+    GameBackgroundtych.setTexture(&TexturInfotych);
+    GameBackgroundtych.setPosition(Vector2f(-250, 35));
+
+    Texture TexturInfotych1;
+    TexturInfotych1.loadFromFile("Image/tych.png");
+    RectangleShape GameBackgroundtych1(Vector2f(250, 150));
+    GameBackgroundtych1.setTexture(&TexturInfotych1);
+    GameBackgroundtych1.setPosition(Vector2f(-350, 150));
+
+    Texture TexturInfotych2;
+    TexturInfotych2.loadFromFile("Image/tych.png");
+    RectangleShape GameBackgroundtych2(Vector2f(250, 150));
+    GameBackgroundtych2.setTexture(&TexturInfotych2);
+    GameBackgroundtych2.setPosition(Vector2f(-500, 0));
+
+    //r1
+    Texture TexturInfor1;
+    TexturInfor1.loadFromFile("Image/r1.png");
+    RectangleShape GameBackgroundr1(Vector2f(50, 75));
+    GameBackgroundr1.setTexture(&TexturInfor1);
+    GameBackgroundr1.setPosition(Vector2f(650, 930));
+
+    //r2
+    Texture TexturInfor2;
+    TexturInfor2.loadFromFile("Image/r2.png");
+    RectangleShape GameBackgroundr2(Vector2f(50, 75));
+    GameBackgroundr2.setTexture(&TexturInfor2);
+    GameBackgroundr2.setPosition(Vector2f(700, 930));
+
+    //palka1
+    Texture TexturInfoPl1;
+    TexturInfoPl1.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl1(Vector2f(10, 300));
+    GameBackgroundPl1.setTexture(&TexturInfoPl1);
+    GameBackgroundPl1.setPosition(Vector2f(25, 700));
+
+    //palka2
+    Texture TexturInfoPl2;
+    TexturInfoPl2.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl2(Vector2f(10, 300));
+    GameBackgroundPl2.setTexture(&TexturInfoPl2);
+    GameBackgroundPl2.setPosition(Vector2f(225, 700));
+
+    //palka3
+    Texture TexturInfoPl3;
+    TexturInfoPl3.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl3(Vector2f(10, 300));
+    GameBackgroundPl3.setTexture(&TexturInfoPl3);
+    GameBackgroundPl3.setPosition(Vector2f(425, 700));
+
+    //palka4
+    Texture TexturInfoPl4;
+    TexturInfoPl4.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl4(Vector2f(10, 300));
+    GameBackgroundPl4.setTexture(&TexturInfoPl4);
+    GameBackgroundPl4.setPosition(Vector2f(625, 700));
+
+    //palka5
+    Texture TexturInfoPl5;
+    TexturInfoPl5.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl5(Vector2f(610, 10));
+    GameBackgroundPl5.setTexture(&TexturInfoPl5);
+    GameBackgroundPl5.setPosition(Vector2f(25, 698));
+
+    //palka6
+    Texture TexturInfoPl6;
+    TexturInfoPl6.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl6(Vector2f(600, 10));
+    GameBackgroundPl6.setTexture(&TexturInfoPl6);
+    GameBackgroundPl6.setPosition(Vector2f(25, 773));
+
+    //palka7
+    Texture TexturInfoPl7;
+    TexturInfoPl7.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl7(Vector2f(600, 10));
+    GameBackgroundPl7.setTexture(&TexturInfoPl7);
+    GameBackgroundPl7.setPosition(Vector2f(25, 848));
+
+    //palka8
+    Texture TexturInfoPl8;
+    TexturInfoPl8.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl8(Vector2f(600, 10));
+    GameBackgroundPl8.setTexture(&TexturInfoPl8);
+    GameBackgroundPl8.setPosition(Vector2f(25, 923));
+
+    //palka9
+    Texture TexturInfoPl9;
+    TexturInfoPl9.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl9(Vector2f(600, 10));
+    GameBackgroundPl9.setTexture(&TexturInfoPl9);
+    GameBackgroundPl9.setPosition(Vector2f(25, 990));
+
+    //установка шрифта 
+    Font font;
+    if (!font.loadFromFile("font/troika.otf")) {
+        cout << "Ошибка!" << endl;
+        return;
+    }
+
+    //короче, утснавливаем название нашим строкам с в первом столбце и во втором столбце значение выбрасов
+    vector<string> substances = { "KAMENNI YGOL", "MAZYT", "PRIRODNI GAZ" };
+    vector<float> values = { 0.0536, 0.0549, 0.19 };
+    random_device rd;
+    mt19937 gen(rd());
+
+    vector<float> rasxodValues(substances.size(), 0.0f);//короче,вектор, который будет хранить значение веществ
+
+    //создаем супер-пупер красивую таблицу
+    int numColumns = 3; //три столбца
+    int numRows = substances.size() + 1; //количество строк
+    float cellWidth = 200.0f; //ширина ячеек
+    float cellHeight = 75.0f; //высота ячеек
+    float tableWidth = cellWidth * numColumns; //ширина всей таблицы 
+    float tableHeight = cellHeight * numRows; //высота все таблицы
+
+    RectangleShape tableBackground(Vector2f(tableWidth, tableHeight));
+    tableBackground.setPosition(35.0f, 700.0f); //располодение таблицы
+    tableBackground.setFillColor(Color(255, 255, 255, 155)); //задний фон таблицы
+
+    vector<RectangleShape> tableRows; //вектор для создания строк в ячайках
+    for (int i = 0; i < numRows; ++i) {
+        RectangleShape row(Vector2f(tableWidth, cellHeight));
+        row.setFillColor(Color(255, 255, 255, 155)); 
+        row.setPosition(tableBackground.getPosition().x, tableBackground.getPosition().y + i * cellHeight);
+        tableRows.push_back(row); 
+    }//в кратце, устанавливвем в каждой ячейке места для текстов, устанввливаеим их цвет фона и позицию, добавляем в в вектор
+
+    vector<Text> tableText; //создаем текст в этих ячейках
+    auto updateTableText = [&]() {
+        tableText.clear();
+        for (int i = 0; i < numRows; ++i) {
+            for (int j = 0; j < numColumns; ++j) {
+                Text cellText;
+                cellText.setFont(font);
+                cellText.setCharacterSize(25);
+                cellText.setFillColor(Color::Black);
+                cellText.setStyle(Text::Bold);
+
+                if (i == 0) {
+                    if (j == 0) cellText.setString("NAME");
+                    else if (j == 1) cellText.setString("ZNACHENIE");
+                    else if (j == 2) cellText.setString("KOL-VO VIB");
+                }
+                else {
+                    if (j == 0) cellText.setString(substances[i - 1]);
+                    else if (j == 1) cellText.setString(to_string(values[i - 1]));
+                    else if (j == 2) {
+                        float vibros = values[i - 1] * rasxodValues[i - 1];
+                        cellText.setString(to_string(vibros));
+                    }
+                }
+                cellText.setPosition(tableBackground.getPosition().x + j * cellWidth,
+                    tableBackground.getPosition().y + i * cellHeight);
+                tableText.push_back(cellText);
+            }
+        }
+    };
+
+    updateTableText(); //первоначальное заполнение таблицы
+
+    vector<Leaf> leaves = { //вектор, в котором хранится информация о листьях
+         {GameBackgroundList1, Vector2f(0, 0), GameBackgroundList1.getPosition(), false},
+         {GameBackgroundList2, Vector2f(0, 0), GameBackgroundList2.getPosition(), false},
+         {GameBackgroundList3, Vector2f(0, 0), GameBackgroundList3.getPosition(), false},
+         {GameBackgroundList4, Vector2f(0, 0), GameBackgroundList4.getPosition(), false},
+         {GameBackgroundList5, Vector2f(0, 0), GameBackgroundList5.getPosition(), false},
+         {GameBackgroundList6, Vector2f(0, 0), GameBackgroundList6.getPosition(), false},
+         {GameBackgroundList7, Vector2f(0, 0), GameBackgroundList7.getPosition(), false},
+         {GameBackgroundList8, Vector2f(0, 0), GameBackgroundList8.getPosition(), false},
+         {GameBackgroundList9, Vector2f(0, 0), GameBackgroundList9.getPosition(), false},
+         {GameBackgroundList10, Vector2f(0, 0), GameBackgroundList10.getPosition(), false},
+         {GameBackgroundList11, Vector2f(0, 0), GameBackgroundList11.getPosition(), false},
+         {GameBackgroundList12, Vector2f(0, 0), GameBackgroundList12.getPosition(), false},
+         {GameBackgroundList12, Vector2f(0, 0), GameBackgroundList12.getPosition(), false}
+    };
+   
+    float treeBaseY = GameBackgroundDer.getPosition().y + GameBackgroundDer.getSize().y;
+    bool animationRunning = false;
+    Clock masterClock;
+    int leafIndex = 0;
+    float fallDelay = 1.0f; //задержка между листьями
+
+    Clock tychClock; //время тучки 
+    Clock tych1Clock;
+    Clock tych2Clock;
+    bool tychMoving = false; //движение тучи
+    bool tych1Moving = false;
+    bool tych2Moving = false;
+    float tychSpeed = 0.2f; //скорость движения тучи
+    float tych1Speed = 0.3f; 
+    float tych2Speed = 0.4f; 
+
+    bool d1Moving = false; //движенеи дыма
+    float d1Speed = 100.0f; //скорость
+    Clock d1Clock; //время 
+    bool d3Moving = false;
+    float d3Speed = 100.0f;
+    Clock d3Clock;
+    Vector2f d1InitialPos = GameBackgroundd1.getPosition();
+    Vector2f d3InitialPos = GameBackgroundd3.getPosition();
+
+    //float kolichVibrosov = 514.0093f;
+
+    while (About.isOpen()) {
+        Event event_play;
+        while (About.pollEvent(event_play)) {
+            if (event_play.type == Event::Closed) About.close();
+            if (event_play.type == Event::KeyPressed) {
+                if (event_play.key.code == Keyboard::Escape) About.close();
+            }
+
+            if (triggerAnimation) { 
+                animationRunning = true; 
+                triggerAnimation = false; //анимация запускается с помощью таблицы
+            }
+
+            if (event_play.type == Event::MouseButtonPressed && event_play.mouseButton.button == Mouse::Left) {
+                Vector2i mousePos = Mouse::getPosition(About);
+
+                if (mousePos.x >= GameBackgroundr1.getPosition().x &&
+                    mousePos.x <= GameBackgroundr1.getPosition().x + GameBackgroundr1.getSize().x &&
+                    mousePos.y >= GameBackgroundr1.getPosition().y &&
+                    mousePos.y <= GameBackgroundr1.getPosition().y + GameBackgroundr1.getSize().y) {
+                    std::uniform_real_distribution<> distrib(1.0, 777.0);
+                    for (int i = 0; i < rasxodValues.size(); ++i)
+                        rasxodValues[i] += distrib(gen);;
+                        //rasxodValues[i] += kolichVibrosov;
+                    updateTableText();
+                    saveToTable(rasxodValues, values);
+                    cout << "Нажали на кнопку R1!" << endl;
+                }
+                else if (mousePos.x >= GameBackgroundr2.getPosition().x &&
+                    mousePos.x <= GameBackgroundr2.getPosition().x + GameBackgroundr2.getSize().x &&
+                    mousePos.y >= GameBackgroundr2.getPosition().y &&
+                    mousePos.y <= GameBackgroundr2.getPosition().y + GameBackgroundr2.getSize().y) {
+                    std::uniform_real_distribution<> distrib(1.0, 777.0);
+                    for (int i = 0; i < rasxodValues.size(); ++i) {
+                        rasxodValues[i] -= distrib(gen);;
+                        //rasxodValues[i] -= kolichVibrosov;
+                        if (rasxodValues[i] < 0.0f) rasxodValues[i] = 0.0f;
+                    }
+                    updateTableText();
+                    saveToTable(rasxodValues, values);
+                    cout << "Нажали на кнопку R2!" << endl;
+                }
+                bool valueGreaterThan2200 = false;
+                float vibros;
+                for (int i = 0; i < rasxodValues.size(); ++i) {
+                    vibros = values[i] * rasxodValues[i];
+                    if (vibros > 2200) {
+                        valueGreaterThan2200 = true;
+                    }
+
+                }
+                if (valueGreaterThan2200) {
+                    triggerAnimation = true;
+                }
+
+                if (event_play.type == Event::MouseButtonPressed) {
+                    Vector2i mousePos = Mouse::getPosition(About);
+
+                    if (mousePos.x >= GameBackgroundStart.getPosition().x &&
+                        mousePos.x <= GameBackgroundStart.getPosition().x + GameBackgroundStart.getSize().x &&
+                        mousePos.y >= GameBackgroundStart.getPosition().y &&
+                        mousePos.y <= GameBackgroundStart.getPosition().y + GameBackgroundStart.getSize().y) {
+                        animationRunning = true;
+                        d1Moving = true;
+                        d3Moving = true;
+                        std::cout << "Нажали на кнопку Start!" << std::endl;
+                    }
+
+                    if (mousePos.x >= GameBackgroundStop.getPosition().x &&
+                        mousePos.x <= GameBackgroundStop.getPosition().x + GameBackgroundStop.getSize().x &&
+                        mousePos.y >= GameBackgroundStop.getPosition().y &&
+                        mousePos.y <= GameBackgroundStop.getPosition().y + GameBackgroundStop.getSize().y) {
+                        animationRunning = false;
+                        d1Moving = false;
+                        d3Moving = false;
+                        std::cout << "Нажали на кнопку Stop!" << std::endl;
+                        GameBackgroundd1.setPosition(d1InitialPos);
+                        GameBackgroundd3.setPosition(d3InitialPos);
+                    }
+
+                }
+                float pypypy = 0;
+                for (size_t i = 0; i < rasxodValues.size(); ++i) {
+                    pypypy = values[i] * rasxodValues[i];
+                }
+
+                animationRunning = (pypypy > 2200); 
+
+            }
+        }
+
+        //проверяем запущенная ли анимация и начинаем работу с ней
+        if (animationRunning) {
+            float elapsedTime = masterClock.getElapsedTime().asSeconds(); //анимация для время 
+            if (leafIndex < leaves.size() && elapsedTime >= leafIndex * fallDelay) {
+                if (!leaves[leafIndex].ypal) {
+                    leaves[leafIndex].Vlist = Vector2f((rand() % 3 - 1.5f) / 100.0f, 0.15f + (rand() % 2) / 100.0f);
+                    leaves[leafIndex].shape.move(leaves[leafIndex].Vlist);
+
+                    if (leaves[leafIndex].shape.getPosition().y > treeBaseY) {
+                        leaves[leafIndex].ypal = true;
+                        leafIndex++; 
+
+                        masterClock.restart();
+                    }
+                }
+            }
+
+            if (d1Moving) {
+                float dt = d1Clock.restart().asSeconds();
+                GameBackgroundd1.move(0, -d1Speed * dt);
+
+                if (GameBackgroundd1.getPosition().y + GameBackgroundd1.getSize().y < 0) {
+                    GameBackgroundd1.setPosition(d1InitialPos);
+                }
+            }
+
+            if (d3Moving) {
+                float dt = d3Clock.restart().asSeconds();
+                GameBackgroundd3.move(0, -d3Speed * dt); 
+
+                if (GameBackgroundd3.getPosition().y + GameBackgroundd3.getSize().y < 0) {
+                    GameBackgroundd3.setPosition(d3InitialPos);
+                }
+            }
+
+            float elapsedTimeTych = tychClock.getElapsedTime().asSeconds();
+            float elapsedTimeTych1 = tych1Clock.getElapsedTime().asSeconds();
+            float elapsedTimeTych2 = tych2Clock.getElapsedTime().asSeconds();
+
+            if (!tychMoving && elapsedTimeTych > 0) {
+                tychMoving = true;
+                tychClock.restart();
+            }
+            if (tychMoving) {
+                GameBackgroundtych.move(tychSpeed, 0);
+                if (GameBackgroundtych.getPosition().x > About.getSize().x) {
+                    tychMoving = false;
+                    GameBackgroundtych.setPosition(-250, 35);
+                }
+            }
+
+            if (!tych1Moving && elapsedTimeTych1 > 2) {
+                tych1Moving = true;
+                tych1Clock.restart();
+            }
+            if (tych1Moving) {
+                GameBackgroundtych1.move(tych1Speed, 0);
+                if (GameBackgroundtych1.getPosition().x > About.getSize().x) {
+                    tych1Moving = false;
+                    GameBackgroundtych1.setPosition(-350, 150);
+                }
+            }
+
+            if (!tych2Moving && elapsedTimeTych2 > 2) {
+                tych2Moving = true;
+                tych2Clock.restart();
+            }
+            if (tych2Moving) {
+                GameBackgroundtych2.move(tych2Speed, 0);
+                if (GameBackgroundtych2.getPosition().x > About.getSize().x) {
+                    tych2Moving = false;
+                    GameBackgroundtych2.setPosition(-500, 0);
+                }
+            }
+        }
+        if (!animationRunning) {
+            GameBackgroundd1.setPosition(d1InitialPos);
+            GameBackgroundd3.setPosition(d3InitialPos);
+            leafIndex = 0;
+            for (auto& leaf : leaves) leaf.ypal = false;
+            tychMoving = false;
+            tych1Moving = false;
+            tych2Moving = false;
+            GameBackgroundtych.setPosition(-250, 35);
+            GameBackgroundtych1.setPosition(-350, 150);
+            GameBackgroundtych2.setPosition(-500, 0);
+            masterClock.restart();
+        }
+
+        About.clear();
+        float chiiil = 0;
+        for (size_t i = 0; i < rasxodValues.size(); ++i) {
+            chiiil = values[i] * rasxodValues[i];
+        }
+        if (chiiil < 500) {
+            About.draw(GameBackgroundFon5);
+            About.draw(GameBackgroundsol);
+        }
+        else if (chiiil >= 500 && chiiil < 2200) {
+            About.draw(GameBackgroundFon1);
+        }
+        else if ((chiiil > 2200) && (chiiil < 3000)) {
+            About.draw(GameBackgroundFon4);
+        }
+        About.draw(GameBackgroundd1);
+        About.draw(GameBackgroundd2);
+        About.draw(GameBackgroundd3);
+        About.draw(GameBackgroundd4);
+        About.draw(GameBackgroundStan);
+        About.draw(GameBackgroundDer);
+        About.draw(GameBackgroundZab);
+        About.draw(GameBackgroundZn1);
+        About.draw(GameBackgroundZn2);
+        About.draw(GameBackgroundZn3);
+        About.draw(GameBackgroundZn4);
+        About.draw(GameBackgroundList1);
+        About.draw(GameBackgroundList2);
+        About.draw(GameBackgroundList3);
+        About.draw(GameBackgroundList4);
+        About.draw(GameBackgroundList5);
+        About.draw(GameBackgroundList6);
+        About.draw(GameBackgroundList7);
+        About.draw(GameBackgroundList8);
+        About.draw(GameBackgroundList9);
+        About.draw(GameBackgroundList10);
+        About.draw(GameBackgroundList11);
+        About.draw(GameBackgroundList12);
+        About.draw(GameBackgroundtych);
+        About.draw(GameBackgroundtych1);
+        About.draw(GameBackgroundtych2);
+        for (const auto& leaf : leaves) {
+            About.draw(leaf.shape);
+        }
+        About.draw(GameBackgroundStart);
+        About.draw(GameBackgroundStop);
+        if (chiiil > 3000) {
+            About.draw(GameBackgroundboom);
+            About.draw(GameBackgroundgg);
+        }
+        About.draw(GameBackgroundr1);
+        About.draw(GameBackgroundr2);
+        About.draw(tableBackground);
+        for (auto& row : tableRows) {
+            About.draw(row);
+        }
+        for (auto& text : tableText) {
+            About.draw(text);
+        }
+        About.draw(GameBackgroundPl1);
+        About.draw(GameBackgroundPl2);
+        About.draw(GameBackgroundPl3);
+        About.draw(GameBackgroundPl4);
+        About.draw(GameBackgroundPl5);
+        About.draw(GameBackgroundPl6);
+        About.draw(GameBackgroundPl7);
+        About.draw(GameBackgroundPl8);
+        About.draw(GameBackgroundPl9);
+        About.display();
+    }
+}
+
+void tablica() {
+    RenderWindow About(VideoMode::getDesktopMode(), L"ТАБЛИЦА", Style::Fullscreen);
+
+    //фон
+    Texture TexturInfoFon2;
+    TexturInfoFon2.loadFromFile("Image/fon2.png");
+    RectangleShape GameBackgroundFon2(Vector2f(2100, 1200));
+    GameBackgroundFon2.setTexture(&TexturInfoFon2);
+    GameBackgroundFon2.setPosition(Vector2f(-70, -70));
+
+    //tablica
+    Texture TexturInfoTab;
+    TexturInfoTab.loadFromFile("Image/tab.png");
+    RectangleShape GameBackgroundTab(Vector2f(500, 100));
+    GameBackgroundTab.setTexture(&TexturInfoTab);
+    GameBackgroundTab.setPosition(Vector2f(25, 25));
+
+    //palka1
+    Texture TexturInfoPl1;
+    TexturInfoPl1.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl1(Vector2f(10, 600));
+    GameBackgroundPl1.setTexture(&TexturInfoPl1);
+    GameBackgroundPl1.setPosition(Vector2f(475, 200));
+
+    //palka2
+    Texture TexturInfoPl2;
+    TexturInfoPl2.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl2(Vector2f(10, 600));
+    GameBackgroundPl2.setTexture(&TexturInfoPl2);
+    GameBackgroundPl2.setPosition(Vector2f(25, 200));
+
+    //palka3
+    Texture TexturInfoPl3;
+    TexturInfoPl3.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl3(Vector2f(10, 600));
+    GameBackgroundPl3.setTexture(&TexturInfoPl3);
+    GameBackgroundPl3.setPosition(Vector2f(925, 200));
+
+    //palka4
+    Texture TexturInfoPl4;
+    TexturInfoPl4.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl4(Vector2f(10, 600));
+    GameBackgroundPl4.setTexture(&TexturInfoPl4);
+    GameBackgroundPl4.setPosition(Vector2f(1375, 200));
+
+    //palka5
+    Texture TexturInfoPl5;
+    TexturInfoPl5.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl5(Vector2f(1350, 10));
+    GameBackgroundPl5.setTexture(&TexturInfoPl5);
+    GameBackgroundPl5.setPosition(Vector2f(35, 200));
+
+    //palka6
+    Texture TexturInfoPl6;
+    TexturInfoPl6.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl6(Vector2f(1350, 10));
+    GameBackgroundPl6.setTexture(&TexturInfoPl6);
+    GameBackgroundPl6.setPosition(Vector2f(35, 790));
+
+    //palka7
+    Texture TexturInfoPl7;
+    TexturInfoPl7.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl7(Vector2f(1350, 10));
+    GameBackgroundPl7.setTexture(&TexturInfoPl7);
+    GameBackgroundPl7.setPosition(Vector2f(35, 350));
+
+    //palka8
+    Texture TexturInfoPl8;
+    TexturInfoPl8.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl8(Vector2f(1350, 10));
+    GameBackgroundPl8.setTexture(&TexturInfoPl8);
+    GameBackgroundPl8.setPosition(Vector2f(35, 500));
+
+    //palka9
+    Texture TexturInfoPl9;
+    TexturInfoPl9.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl9(Vector2f(1350, 10));
+    GameBackgroundPl9.setTexture(&TexturInfoPl9);
+    GameBackgroundPl9.setPosition(Vector2f(35, 650));
+
+    //srZn
+    Texture TexturInfosr;
+    TexturInfosr.loadFromFile("Image/srZn.png");
+    RectangleShape GameBackgroundsr(Vector2f(1360, 155));
+    GameBackgroundsr.setTexture(&TexturInfosr);
+    GameBackgroundsr.setPosition(Vector2f(25, 850));
+
+    //r1
+    Texture TexturInfor1;
+    TexturInfor1.loadFromFile("Image/r1.png");
+    RectangleShape GameBackgroundr1(Vector2f(200, 250));
+    GameBackgroundr1.setTexture(&TexturInfor1);
+    GameBackgroundr1.setPosition(Vector2f(1450, 570));
+
+    //r2
+    Texture TexturInfor2;
+    TexturInfor2.loadFromFile("Image/r2.png");
+    RectangleShape GameBackgroundr2(Vector2f(200, 250));
+    GameBackgroundr2.setTexture(&TexturInfor2);
+    GameBackgroundr2.setPosition(Vector2f(1650, 570));
+
+    Font font;
+    if (!font.loadFromFile("font/troika.otf")) {
+        cerr << "Ошибка загрузки шрифта" << endl;
+        return;
+    }
+
+    vector<string> substances = { "KAMENNI YGOL", "MAZYT", "PRIRODNI GAZ" };
+    vector<float> values = { 0.0536, 0.0549, 0.19 };
+    random_device rd;
+    mt19937 gen(rd());
+
+    vector<float> rasxodValues(substances.size(), 0.0f);
+
+    int numColumns = 3;
+    int numRows = substances.size() + 1;
+    float cellWidth = 450.0f;
+    float cellHeight = 150.0f;
+    float tableWidth = cellWidth * numColumns;
+    float tableHeight = cellHeight * numRows;
+
+    RectangleShape tableBackground(Vector2f(tableWidth, tableHeight));
+    tableBackground.setPosition(35.0f, 200.0f);
+    tableBackground.setFillColor(Color(255, 255, 255, 150));
+
+    vector<RectangleShape> tableRows;
+    for (int i = 0; i < numRows; ++i) {
+        RectangleShape row(Vector2f(tableWidth, cellHeight));
+        row.setFillColor(Color(255, 255, 255, 155));
+        row.setPosition(tableBackground.getPosition().x, tableBackground.getPosition().y + i * cellHeight);
+        tableRows.push_back(row);
+    }
+
+    vector<Text> tableText;
+    auto updateTableText = [&]() {
+        tableText.clear();
+        for (int i = 0; i < numRows; ++i) {
+            for (int j = 0; j < numColumns; ++j) {
+                Text cellText;
+                cellText.setFont(font);
+                cellText.setCharacterSize(40);
+                cellText.setFillColor(Color::Black);
+                cellText.setStyle(Text::Bold);
+
+                if (i == 0) {
+                    if (j == 0) cellText.setString("NAME VESHESTV");
+                    else if (j == 1) cellText.setString("ZNACHENIE VIBROSA");
+                    else if (j == 2) cellText.setString("KOLICHESTVO VIBROSA");
+                }
+                else {
+                    if (j == 0) cellText.setString(substances[i - 1]);
+                    else if (j == 1) cellText.setString(to_string(values[i - 1]));
+                    else if (j == 2) {
+                        float vibros = values[i - 1] * rasxodValues[i - 1];
+                        cellText.setString(to_string(vibros));
+                    }
+                }
+                cellText.setPosition(tableBackground.getPosition().x + j * cellWidth,
+                    tableBackground.getPosition().y + i * cellHeight);
+                tableText.push_back(cellText);
+            }
+        }
+        };
+
+    updateTableText();
+
+    float kolichVibrosov = 514.0093f;
+
+    while (About.isOpen()) {
+        Event event_play;
+        while (About.pollEvent(event_play)) {
+            if (event_play.type == Event::Closed) About.close();
+            if (event_play.type == Event::KeyPressed && event_play.key.code == Keyboard::Escape) About.close();
+
+            if (event_play.type == Event::MouseButtonPressed && event_play.mouseButton.button == Mouse::Left) {
+                Vector2i mousePos = Mouse::getPosition(About);
+
+                if (mousePos.x >= GameBackgroundr1.getPosition().x &&
+                    mousePos.x <= GameBackgroundr1.getPosition().x + GameBackgroundr1.getSize().x &&
+                    mousePos.y >= GameBackgroundr1.getPosition().y &&
+                    mousePos.y <= GameBackgroundr1.getPosition().y + GameBackgroundr1.getSize().y) {
+                    //std::uniform_real_distribution<> distrib(1.0, 777.0);
+                    for (int i = 0; i < rasxodValues.size(); ++i)
+                        //rasxodValues[i] += distrib(gen);;
+                        rasxodValues[i] += kolichVibrosov;
+                    updateTableText();
+                    saveToTable(rasxodValues, values);
+                    cout << "Нажали на кнопку R1!" << endl;
+                }
+                else if (mousePos.x >= GameBackgroundr2.getPosition().x &&
+                    mousePos.x <= GameBackgroundr2.getPosition().x + GameBackgroundr2.getSize().x &&
+                    mousePos.y >= GameBackgroundr2.getPosition().y && 
+                    mousePos.y <= GameBackgroundr2.getPosition().y + GameBackgroundr2.getSize().y) {
+                    //std::uniform_real_distribution<> distrib(1.0, 777.0);
+                    for (int i = 0; i < rasxodValues.size(); ++i) {
+                        //rasxodValues[i] -= distrib(gen);;
+                        rasxodValues[i] -= kolichVibrosov;
+                        if (rasxodValues[i] < 0.0f) rasxodValues[i] = 0.0f;
+                    }
+                    updateTableText();
+                    saveToTable(rasxodValues, values);
+                    cout << "Нажали на кнопку R2!" << endl;
+                }
+            }
+        }
+
+        About.clear();
+        About.draw(GameBackgroundFon2);
+        About.draw(GameBackgroundTab);
+        About.draw(tableBackground);
+        for (auto& row : tableRows) {
+            About.draw(row);
+        }
+        for (auto& text : tableText) {
+            About.draw(text);
+        }
+        About.draw(GameBackgroundPl1);
+        About.draw(GameBackgroundPl2);
+        About.draw(GameBackgroundPl3);
+        About.draw(GameBackgroundPl4);
+        About.draw(GameBackgroundPl5);
+        About.draw(GameBackgroundPl6);
+        About.draw(GameBackgroundPl7);
+        About.draw(GameBackgroundPl8);
+        About.draw(GameBackgroundPl9);
+        About.draw(GameBackgroundsr);
+        About.draw(GameBackgroundr1);
+        About.draw(GameBackgroundr2);
+        About.display();
+    }
+}
+
+vector<Vector2f> interpolateSpline(const vector<Vector2f>& points, int numSegments) {
+    vector<Vector2f> interpolatedPoints; //хранить точки бужем
+    if (points.size() < 2) return interpolatedPoints; //точек 2 должно быть
+    for (size_t i = 0; i < points.size() - 1; ++i) { //цикл в котором у нас будет строиться график по точка
+        float p0x = (i > 0) ? points[i - 1].x : points[i].x;
+        float p0y = (i > 0) ? points[i - 1].y : points[i].y;
+        float p1x = points[i].x;//текуещая  
+        float p1y = points[i].y;
+        float p2x = points[i + 1].x;//следующая
+        float p2y = points[i + 1].y;
+        float p3x = (i < points.size() - 2) ? points[i + 2].x : p2x;//послеследующей
+        float p3y = (i < points.size() - 2) ? points[i + 2].y : p2y;
+
+        for (int j = 0; j <= numSegments; ++j) {//короче, по кол-ву точек пробегает
+            float t = (float)j / numSegments; //для кубического построения х и у
+            float t2 = t * t;
+            float t3 = t2 * t;
+
+            float x = 0.5f * ((2.0f * p1x) + (-p0x + p2x) * t + (2.0f * p0x - 5.0f * p1x + 4.0f * p2x - p3x) * t2 + (-p0x + 3.0f * p1x - 3.0f * p2x + p3x) * t3);
+            float y = 0.5f * ((2.0f * p1y) + (-p0y + p2y) * t + (2.0f * p0y - 5.0f * p1y + 4.0f * p2y - p3y) * t2 + (-p0y + 3.0f * p1y - 3.0f * p2y + p3y) * t3);
+            interpolatedPoints.push_back(Vector2f(x, y));
+        }
+    }
+    return interpolatedPoints;
+}
+
+void grafik() {
+    RenderWindow About(sf::VideoMode::getDesktopMode(), L"ГРАФИК", sf::Style::Fullscreen);
+    About.clear(sf::Color::White);
+
+    //фон
+    Texture TexturInfoFon3;
+    TexturInfoFon3.loadFromFile("Image/fon3.png");
+    RectangleShape GameBackgroundFon3(Vector2f(2100, 1200));
+    GameBackgroundFon3.setTexture(&TexturInfoFon3);
+    GameBackgroundFon3.setPosition(Vector2f(-70, -70));
+
+    //sxema
+    Texture TexturInfoSx;
+    TexturInfoSx.loadFromFile("Image/sxema.png");
+    RectangleShape GameBackgroundSx(Vector2f(700, 100));
+    GameBackgroundSx.setTexture(&TexturInfoSx);
+    GameBackgroundSx.setPosition(Vector2f(25, 25));
+
+    //tetrad
+    Texture TexturInfotet;
+    TexturInfotet.loadFromFile("Image/f2.png");
+    RectangleShape GameBackgroundtet(Vector2f(1570, 780));
+    GameBackgroundtet.setTexture(&TexturInfotet);
+    GameBackgroundtet.setPosition(Vector2f(180, 150));
+
+    //strelka1
+    Texture TexturInfos1;
+    TexturInfos1.loadFromFile("Image/s1.png");
+    RectangleShape GameBackgrounds1(Vector2f(40, 50));
+    GameBackgrounds1.setTexture(&TexturInfos1);
+    GameBackgrounds1.setPosition(Vector2f(231, 160));
+
+    //strelka1
+    Texture TexturInfos2;
+    TexturInfos2.loadFromFile("Image/s2.png");
+    RectangleShape GameBackgrounds2(Vector2f(55, 30));
+    GameBackgrounds2.setTexture(&TexturInfos2);
+    GameBackgrounds2.setPosition(Vector2f(1650, 867));
+
+    //palka5
+    Texture TexturInfoPl1;
+    TexturInfoPl1.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl1(Vector2f(20, 10));
+    GameBackgroundPl1.setTexture(&TexturInfoPl1);
+    GameBackgroundPl1.setPosition(Vector2f(243, 765));
+
+    Texture TexturInfoPl2;
+    TexturInfoPl2.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl2(Vector2f(20, 10));
+    GameBackgroundPl2.setTexture(&TexturInfoPl2);
+    GameBackgroundPl2.setPosition(Vector2f(243, 655));
+
+    Texture TexturInfoPl3;
+    TexturInfoPl3.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl3(Vector2f(20, 10));
+    GameBackgroundPl3.setTexture(&TexturInfoPl3);
+    GameBackgroundPl3.setPosition(Vector2f(243, 545));
+
+    Texture TexturInfoPl4;
+    TexturInfoPl4.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl4(Vector2f(20, 10));
+    GameBackgroundPl4.setTexture(&TexturInfoPl4);
+    GameBackgroundPl4.setPosition(Vector2f(243, 435));
+
+    Texture TexturInfoPl5;
+    TexturInfoPl5.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl5(Vector2f(20, 10));
+    GameBackgroundPl5.setTexture(&TexturInfoPl5);
+    GameBackgroundPl5.setPosition(Vector2f(243, 325));
+
+    Texture TexturInfoPl6;
+    TexturInfoPl6.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl6(Vector2f(20, 10));
+    GameBackgroundPl6.setTexture(&TexturInfoPl6);
+    GameBackgroundPl6.setPosition(Vector2f(243, 215));
+
+    Texture TexturInfoPl7;
+    TexturInfoPl7.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundPl7(Vector2f(20, 20));
+    GameBackgroundPl7.setTexture(&TexturInfoPl7);
+    GameBackgroundPl7.setPosition(Vector2f(243, 872));
+
+    Texture TexturInfoP1;
+    TexturInfoP1.loadFromFile("Image/p1.png");
+    RectangleShape GameBackgroundP1(Vector2f(1490, 5));
+    GameBackgroundP1.setTexture(&TexturInfoP1);
+    GameBackgroundP1.setPosition(Vector2f(243, 735));
+
+    Texture TexturInfoP2;
+    TexturInfoP2.loadFromFile("Image/p1.png");
+    RectangleShape GameBackgroundP2(Vector2f(1490, 5));
+    GameBackgroundP2.setTexture(&TexturInfoP2);
+    GameBackgroundP2.setPosition(Vector2f(243, 272));
+
+    Texture TexturInfot1;
+    TexturInfot1.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt1(Vector2f(10, 20));
+    GameBackgroundt1.setTexture(&TexturInfot1);
+    GameBackgroundt1.setPosition(Vector2f(305, 872));
+
+    Texture TexturInfot2;
+    TexturInfot2.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt2(Vector2f(10, 20));
+    GameBackgroundt2.setTexture(&TexturInfot2);
+    GameBackgroundt2.setPosition(Vector2f(362, 872));
+
+    Texture TexturInfot3;
+    TexturInfot3.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt3(Vector2f(10, 20));
+    GameBackgroundt3.setTexture(&TexturInfot3);
+    GameBackgroundt3.setPosition(Vector2f(419, 872));
+
+    Texture TexturInfot4;
+    TexturInfot4.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt4(Vector2f(10, 20));
+    GameBackgroundt4.setTexture(&TexturInfot4);
+    GameBackgroundt4.setPosition(Vector2f(476, 872));
+
+    Texture TexturInfot5;
+    TexturInfot5.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt5(Vector2f(10, 20));
+    GameBackgroundt5.setTexture(&TexturInfot5);
+    GameBackgroundt5.setPosition(Vector2f(533, 872));
+
+    Texture TexturInfot6;
+    TexturInfot6.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt6(Vector2f(10, 20));
+    GameBackgroundt6.setTexture(&TexturInfot6);
+    GameBackgroundt6.setPosition(Vector2f(590, 872));
+
+    Texture TexturInfot7;
+    TexturInfot7.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt7(Vector2f(10, 20));
+    GameBackgroundt7.setTexture(&TexturInfot7);
+    GameBackgroundt7.setPosition(Vector2f(647, 872));
+
+    Texture TexturInfot8;
+    TexturInfot8.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt8(Vector2f(10, 20));
+    GameBackgroundt8.setTexture(&TexturInfot8);
+    GameBackgroundt8.setPosition(Vector2f(704, 872));
+
+    Texture TexturInfot9;
+    TexturInfot9.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt9(Vector2f(10, 20));
+    GameBackgroundt9.setTexture(&TexturInfot9);
+    GameBackgroundt9.setPosition(Vector2f(761, 872));
+
+    Texture TexturInfot10;
+    TexturInfot10.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt10(Vector2f(10, 20));
+    GameBackgroundt10.setTexture(&TexturInfot10);
+    GameBackgroundt10.setPosition(Vector2f(818, 872));
+
+    Texture TexturInfot11;
+    TexturInfot11.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt11(Vector2f(10, 20));
+    GameBackgroundt11.setTexture(&TexturInfot11);
+    GameBackgroundt11.setPosition(Vector2f(875, 872));
+
+    Texture TexturInfot12;
+    TexturInfot12.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt12(Vector2f(10, 20));
+    GameBackgroundt12.setTexture(&TexturInfot12);
+    GameBackgroundt12.setPosition(Vector2f(932, 872));
+
+    Texture TexturInfot13;
+    TexturInfot13.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt13(Vector2f(10, 20));
+    GameBackgroundt13.setTexture(&TexturInfot13);
+    GameBackgroundt13.setPosition(Vector2f(989, 872));
+
+    Texture TexturInfot14;
+    TexturInfot14.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt14(Vector2f(10, 20));
+    GameBackgroundt14.setTexture(&TexturInfot14);
+    GameBackgroundt14.setPosition(Vector2f(1616, 872));
+
+    Texture TexturInfot15;
+    TexturInfot15.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt15(Vector2f(10, 20));
+    GameBackgroundt15.setTexture(&TexturInfot15);
+    GameBackgroundt15.setPosition(Vector2f(1046, 872));
+
+    Texture TexturInfot16;
+    TexturInfot16.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt16(Vector2f(10, 20));
+    GameBackgroundt16.setTexture(&TexturInfot16);
+    GameBackgroundt16.setPosition(Vector2f(1103, 872));
+
+    Texture TexturInfot17;
+    TexturInfot17.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt17(Vector2f(10, 20));
+    GameBackgroundt17.setTexture(&TexturInfot17);
+    GameBackgroundt17.setPosition(Vector2f(1160, 872));
+
+    Texture TexturInfot18;
+    TexturInfot18.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt18(Vector2f(10, 20));
+    GameBackgroundt18.setTexture(&TexturInfot18);
+    GameBackgroundt18.setPosition(Vector2f(1217, 872));
+
+    Texture TexturInfot19;
+    TexturInfot19.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt19(Vector2f(10, 20));
+    GameBackgroundt19.setTexture(&TexturInfot19);
+    GameBackgroundt19.setPosition(Vector2f(1274, 872));
+
+    Texture TexturInfot20;
+    TexturInfot20.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt20(Vector2f(10, 20));
+    GameBackgroundt20.setTexture(&TexturInfot20);
+    GameBackgroundt20.setPosition(Vector2f(1331, 872));
+
+    Texture TexturInfot21;
+    TexturInfot21.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt21(Vector2f(10, 20));
+    GameBackgroundt21.setTexture(&TexturInfot21);
+    GameBackgroundt21.setPosition(Vector2f(1388, 872));
+
+    Texture TexturInfot22;
+    TexturInfot22.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt22(Vector2f(10, 20));
+    GameBackgroundt22.setTexture(&TexturInfot22);
+    GameBackgroundt22.setPosition(Vector2f(1445, 872));
+
+    Texture TexturInfot23;
+    TexturInfot23.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt23(Vector2f(10, 20));
+    GameBackgroundt23.setTexture(&TexturInfot23);
+    GameBackgroundt23.setPosition(Vector2f(1502, 872));
+
+    Texture TexturInfot24;
+    TexturInfot24.loadFromFile("Image/palka1.png");
+    RectangleShape GameBackgroundt24(Vector2f(10, 20));
+    GameBackgroundt24.setTexture(&TexturInfot24);
+    GameBackgroundt24.setPosition(Vector2f(1559, 872));
+
+
+    vector<sf::Vector2f> dataPoints;
+    ifstream inputFile("data.txt");
+    if (!inputFile.is_open()) {
+        cout << "Ошибка!" << endl;
+        return;
+    }
+    float x, y;
+    while (inputFile >> x >> y) {
+        dataPoints.push_back(Vector2f(x, y));
+    }
+    inputFile.close();
+
+    if (dataPoints.empty()) {
+        cout << "Ошибка!" << endl;
+        return;
+    }
+
+    float max_x = 24.0f;
+    float max_y = 0.0f;
+    for (const auto& p : dataPoints) {
+        max_y = max(max_y, p.y);
+    }
+    max_y *= 1.1; 
+
+    float margin_x = 250.0f;
+    float margin_y = 200.0f;
+    float axis_width = 5.0f; //толщина линий
+    float origin_x = margin_x; //начало коорди нат
+    float origin_y = About.getSize().y - margin_y; 
+    float x_axis_length = About.getSize().x - 2 * margin_x; //длины
+    float y_axis_length = About.getSize().y - 2 * margin_y;
+
+    float x_scale = x_axis_length / max_x; //масштабы
+    float y_scale = y_axis_length / max_y;
+
+    RectangleShape xAxis(Vector2f(x_axis_length, axis_width)); //созданеи оси и цвета
+    xAxis.setFillColor(sf::Color::Black);
+    xAxis.setPosition(origin_x, origin_y);
+
+    RectangleShape yAxis(Vector2f(axis_width, y_axis_length));
+    yAxis.setFillColor(sf::Color::Black);
+    yAxis.setPosition(origin_x, origin_y - y_axis_length);
+
+    Font font; //устнаовка шрифта
+    if (!font.loadFromFile("font/troika.otf")) {
+        cout << "Ошибка!" << endl;
+        return;
+    }
+
+    Text label; //настройка подписей осей
+    label.setFont(font);
+    label.setCharacterSize(222);
+    label.setFillColor(Color::Black);
+    float tick_length = 10.0f;
+
+    Text xLabel("T (time)", font, 20);
+    xLabel.setFillColor(Color::Black);
+    xLabel.setPosition(origin_x + x_axis_length / 1 - xLabel.getLocalBounds().width / 2, origin_y + 10);
+
+    Text xLabel1("1", font, 20);
+    xLabel1.setFillColor(Color::Black);
+    xLabel1.setPosition(origin_x + x_axis_length / 24 - xLabel1.getLocalBounds().width / 2, origin_y + 10);
+
+    Text yLabel("K (kol-vo)", font, 20);
+    yLabel.setFillColor(Color::Black);
+    yLabel.setPosition(origin_x - yLabel.getLocalBounds().width - -55, origin_y - y_axis_length / 1.1);
+    yLabel.setRotation(-90);
+
+    Text yLabel1("400", font, 20);
+    yLabel1.setFillColor(Color::Black);
+    yLabel1.setPosition(origin_x - yLabel1.getLocalBounds().width - 15, origin_y - y_axis_length / 5.5);
+
+    Text yLabel2("2000", font, 20);
+    yLabel2.setFillColor(Color::Black);
+    yLabel2.setPosition(origin_x - yLabel2.getLocalBounds().width - 15, origin_y - y_axis_length / 1.206);
+
+    Text yLabel3("max", font, 20);
+    yLabel3.setFillColor(Color::Black);
+    yLabel3.setPosition(origin_x - yLabel3.getLocalBounds().width - -1480, origin_y - y_axis_length / 1.075);
+
+    Text yLabel4("min", font, 20);
+    yLabel4.setFillColor(Color::Black);
+    yLabel4.setPosition(origin_x - yLabel4.getLocalBounds().width - -1480, origin_y - y_axis_length / 4.0);
+
+    vector<Vector2f> interpolatedPoints = interpolateSpline(dataPoints, 24);
+
+    VertexArray line(LinesStrip, interpolatedPoints.size());
+    for (size_t i = 0; i < interpolatedPoints.size(); ++i) {
+        line[i].position = Vector2f(origin_x + interpolatedPoints[i].x * x_scale, origin_y - interpolatedPoints[i].y * y_scale);
+        line[i].color = Color::Black;
+    }
+
+    About.clear();
+    About.draw(GameBackgroundFon3);
+    About.draw(GameBackgroundSx);
+    About.draw(GameBackgroundtet);
+    About.draw(GameBackgrounds1);
+    About.draw(GameBackgrounds2);
+    About.draw(GameBackgroundPl1);
+    About.draw(GameBackgroundPl2);
+    About.draw(GameBackgroundPl3);
+    About.draw(GameBackgroundPl4);
+    About.draw(GameBackgroundPl5);
+    About.draw(GameBackgroundPl6);
+    About.draw(GameBackgroundPl7);
+    About.draw(GameBackgroundt1);
+    About.draw(GameBackgroundt2);
+    About.draw(GameBackgroundt3);
+    About.draw(GameBackgroundt4);
+    About.draw(GameBackgroundt5);
+    About.draw(GameBackgroundt6);
+    About.draw(GameBackgroundt7);
+    About.draw(GameBackgroundt8);
+    About.draw(GameBackgroundt9);
+    About.draw(GameBackgroundt10);
+    About.draw(GameBackgroundt11);
+    About.draw(GameBackgroundt12);
+    About.draw(GameBackgroundt13);
+    About.draw(GameBackgroundt14);
+    About.draw(GameBackgroundt15);
+    About.draw(GameBackgroundt16);
+    About.draw(GameBackgroundt17);
+    About.draw(GameBackgroundt18);
+    About.draw(GameBackgroundt19);
+    About.draw(GameBackgroundt20);
+    About.draw(GameBackgroundt21);
+    About.draw(GameBackgroundt22);
+    About.draw(GameBackgroundt23);
+    About.draw(GameBackgroundt24);
+    About.draw(xAxis);
+    About.draw(yAxis);
+    About.draw(xLabel);
+    About.draw(xLabel1);
+    About.draw(yLabel);
+    About.draw(yLabel1);
+    About.draw(yLabel2);
+    About.draw(yLabel3);
+    About.draw(yLabel4);
+    About.draw(line);
+    About.draw(GameBackgroundP1);
+    About.draw(GameBackgroundP2);
+    About.display();
+
+    while (About.isOpen()) {
+        Event event;
+        while (About.pollEvent(event)) {
+            if (event.type == Event::Closed || (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape)) {
+                About.close();
+            }
+        }
+    }
+}
+
+int main() {
+
+    setlocale(LC_ALL, "ru");
+    char choice;
+
+    while (true) {
+        //sozdaem okna windows
+        RenderWindow window;
+        //window.setFramerateLimit(5);
+        window.create(VideoMode::getDesktopMode(), L"РАБОТА АТОМНОЙ СТАНЦИИ", Style::Fullscreen);
+
+        //off kyrsor
+        //window.setMouseCursorVisible(false);
+
+        //razmer display
+        float width = VideoMode::getDesktopMode().width;
+        float height = VideoMode::getDesktopMode().height;
+
+        //ystanovka ikrana menu
+        RectangleShape background(Vector2f(width, height));
+
+        Texture texture_window;
+        if (!texture_window.loadFromFile("Image/fon.png")) return 4;
+        background.setTexture(&texture_window);
+
+        //chrift
+        Font font;
+        if (!font.loadFromFile("font/troika.otf")) return 5;
+        //text s nazvaniem
+        Text Titul;
+        Titul.setFont(font);
+        InitText(Titul, 250, 75, L"РАБОТА АТОМНОЙ СТАНЦИИ", 
+            125, Color(237, 147, 0), 3);
+
+        //name pynktov menu
+        String name_menu[4]{ L"Атомная станция", L"Таблица данных", L"График",L"Выход" };
+
+        //obekt menu
+        game::GameMenu mymenu(window, 950, 400, name_menu, 75, 75);
+        //цвет меню 
+        mymenu.setColorTextMenu(Color(237, 147, 0), Color::Red, Color::Black);
+        mymenu.AlignMenu(2);
+
+        while (window.isOpen()) {
+            Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == Event::KeyReleased) {
+                    if (event.key.code == Keyboard::Up) { mymenu.MoveUp(); }      //вверх
+                    if (event.key.code == Keyboard::Down) { mymenu.MoveDown(); }  //вниз
+                    if (event.key.code == Keyboard::Return) {                     //ввод
+                        switch (mymenu.getSelectedMenuNumber()) {
+                        case 0: atamst(); break;
+                        case 1: tablica(); break;
+                        case 2: grafik(); break;
+                        case 3: window.close(); break;
+                        }
+                    }
+                }
+            }
+            window.clear();
+            window.draw(background);
+            window.draw(Titul);
+            mymenu.draw();
+            window.display();
+        }
+
+        cout << "Хотите повторить ввод данных ([ДА]y/[НЕТ]x)? " << endl;
+        cin >> choice;
+        system("cls");
+
+        if (choice == 'x') {
+            break;
+        }
+    }
+    return 0;
+}
